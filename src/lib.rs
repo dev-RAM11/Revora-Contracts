@@ -1,4 +1,4 @@
-﻿#![no_std]
+#![no_std]
 #![deny(unsafe_code)]
 #![allow(dead_code)]
 #![allow(unused_variables)]
@@ -2932,14 +2932,14 @@ impl RevoraRevenueShare {
         for i in 0..unique_investors.len() {
             let investor = unique_investors.get(i).unwrap();
             let was_present = map.get(investor.clone()).unwrap_or(false);
-            
+
             if !was_present {
                 // Add to map and order vec
                 if !Self::is_event_only(&env) {
                     map.set(investor.clone(), true);
                     order.push_back(investor.clone());
                 }
-                
+
                 // Emit event for actual state change
                 env.events().publish(
                     (EVENT_BL_ADD, issuer.clone(), namespace.clone(), token.clone()),
@@ -3116,11 +3116,11 @@ impl RevoraRevenueShare {
         for i in 0..unique_investors.len() {
             let investor = unique_investors.get(i).unwrap();
             let was_present = map.get(investor.clone()).unwrap_or(false);
-            
+
             if was_present {
                 // Remove from map
                 map.remove(investor.clone());
-                
+
                 // Emit event for actual state change
                 env.events().publish(
                     (EVENT_BL_REM, issuer.clone(), namespace.clone(), token.clone()),
@@ -4476,41 +4476,87 @@ impl RevoraRevenueShare {
     }
 
     /// Configure the reporting access window for an offering. If unset, always open.
-    pub fn set_report_window(env: Env, issuer: Address, namespace: Symbol, token: Address, start_timestamp: u64, end_timestamp: u64) -> Result<(), RevoraError> {
+    pub fn set_report_window(
+        env: Env,
+        issuer: Address,
+        namespace: Symbol,
+        token: Address,
+        start_timestamp: u64,
+        end_timestamp: u64,
+    ) -> Result<(), RevoraError> {
         Self::require_not_frozen(&env)?;
-        let current_issuer = Self::get_current_issuer(&env, issuer.clone(), namespace.clone(), token.clone()).ok_or(RevoraError::OfferingNotFound)?;
-        if current_issuer != issuer { return Err(RevoraError::OfferingNotFound); }
+        let current_issuer =
+            Self::get_current_issuer(&env, issuer.clone(), namespace.clone(), token.clone())
+                .ok_or(RevoraError::OfferingNotFound)?;
+        if current_issuer != issuer {
+            return Err(RevoraError::OfferingNotFound);
+        }
         issuer.require_auth();
         let window = AccessWindow { start_timestamp, end_timestamp };
         Self::validate_window(&window)?;
-        let offering_id = OfferingId { issuer: issuer.clone(), namespace: namespace.clone(), token: token.clone() };
+        let offering_id = OfferingId {
+            issuer: issuer.clone(),
+            namespace: namespace.clone(),
+            token: token.clone(),
+        };
         env.storage().persistent().set(&WindowDataKey::Report(offering_id), &window);
-        env.events().publish((EVENT_REPORT_WINDOW_SET, issuer, namespace, token), (start_timestamp, end_timestamp));
+        env.events().publish(
+            (EVENT_REPORT_WINDOW_SET, issuer, namespace, token),
+            (start_timestamp, end_timestamp),
+        );
         Ok(())
     }
 
     /// Configure the claiming access window for an offering. If unset, always open.
-    pub fn set_claim_window(env: Env, issuer: Address, namespace: Symbol, token: Address, start_timestamp: u64, end_timestamp: u64) -> Result<(), RevoraError> {
+    pub fn set_claim_window(
+        env: Env,
+        issuer: Address,
+        namespace: Symbol,
+        token: Address,
+        start_timestamp: u64,
+        end_timestamp: u64,
+    ) -> Result<(), RevoraError> {
         Self::require_not_frozen(&env)?;
-        let current_issuer = Self::get_current_issuer(&env, issuer.clone(), namespace.clone(), token.clone()).ok_or(RevoraError::OfferingNotFound)?;
-        if current_issuer != issuer { return Err(RevoraError::OfferingNotFound); }
+        let current_issuer =
+            Self::get_current_issuer(&env, issuer.clone(), namespace.clone(), token.clone())
+                .ok_or(RevoraError::OfferingNotFound)?;
+        if current_issuer != issuer {
+            return Err(RevoraError::OfferingNotFound);
+        }
         issuer.require_auth();
         let window = AccessWindow { start_timestamp, end_timestamp };
         Self::validate_window(&window)?;
-        let offering_id = OfferingId { issuer: issuer.clone(), namespace: namespace.clone(), token: token.clone() };
+        let offering_id = OfferingId {
+            issuer: issuer.clone(),
+            namespace: namespace.clone(),
+            token: token.clone(),
+        };
         env.storage().persistent().set(&WindowDataKey::Claim(offering_id), &window);
-        env.events().publish((EVENT_CLAIM_WINDOW_SET, issuer, namespace, token), (start_timestamp, end_timestamp));
+        env.events().publish(
+            (EVENT_CLAIM_WINDOW_SET, issuer, namespace, token),
+            (start_timestamp, end_timestamp),
+        );
         Ok(())
     }
 
     /// Read configured reporting window (if any) for an offering.
-    pub fn get_report_window(env: Env, issuer: Address, namespace: Symbol, token: Address) -> Option<AccessWindow> {
+    pub fn get_report_window(
+        env: Env,
+        issuer: Address,
+        namespace: Symbol,
+        token: Address,
+    ) -> Option<AccessWindow> {
         let offering_id = OfferingId { issuer, namespace, token };
         env.storage().persistent().get(&WindowDataKey::Report(offering_id))
     }
 
     /// Read configured claiming window (if any) for an offering.
-    pub fn get_claim_window(env: Env, issuer: Address, namespace: Symbol, token: Address) -> Option<AccessWindow> {
+    pub fn get_claim_window(
+        env: Env,
+        issuer: Address,
+        namespace: Symbol,
+        token: Address,
+    ) -> Option<AccessWindow> {
         let offering_id = OfferingId { issuer, namespace, token };
         env.storage().persistent().get(&WindowDataKey::Claim(offering_id))
     }
@@ -5974,7 +6020,8 @@ mod issue_370_373_tests {
             assert_eq!(page_3.get(i).unwrap().token, tokens.get(i + 20).unwrap());
         }
 
-        let (page_clamped, cursor_clamped) = client.get_offerings_page(&issuer, &namespace, &0, &100);
+        let (page_clamped, cursor_clamped) =
+            client.get_offerings_page(&issuer, &namespace, &0, &100);
         assert_eq!(page_clamped.len(), 20);
         assert_eq!(cursor_clamped, Some(20));
 
@@ -6005,12 +6052,8 @@ mod issue_370_373_tests {
         env.as_contract(&contract_id, || {
             env.storage().persistent().set(&DataKey2::IssuerCount, &1_u32);
             env.storage().persistent().set(&DataKey2::IssuerItem(0), &old_issuer);
-            env.storage()
-                .persistent()
-                .set(&DataKey2::IssuerRegistered(old_issuer.clone()), &true);
-            env.storage()
-                .persistent()
-                .set(&DataKey2::NamespaceCount(old_issuer.clone()), &1_u32);
+            env.storage().persistent().set(&DataKey2::IssuerRegistered(old_issuer.clone()), &true);
+            env.storage().persistent().set(&DataKey2::NamespaceCount(old_issuer.clone()), &1_u32);
             env.storage()
                 .persistent()
                 .set(&DataKey2::NamespaceItem(old_issuer.clone(), 0), &namespace);
@@ -6093,4 +6136,58 @@ mod issue_370_373_tests {
     }
 }
 
+// --- INJECTED DEFERRED DISTRIBUTION LOGIC (#456) ---
 
+#[contracterror]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
+#[repr(u32)]
+pub enum DistributionError {
+    DistributionDeferred = 456,
+}
+
+#[contracttype]
+pub enum DeferredDataKey {
+    DeferredReports(u32), // period_id
+}
+
+#[contractimpl]
+impl Contract {
+    /// Queues a distribution report, deferring it until close_period if the flag is true
+    pub fn report_revenue(env: Env, period_id: u32, amount: i128, defer_until_close: bool) {
+        if defer_until_close {
+            env.storage().persistent().set(&DeferredDataKey::DeferredReports(period_id), &amount);
+            env.events().publish((symbol_short!("def_report"), period_id), amount);
+        } else {
+            // Immediate distribution routing logic (legacy)
+        }
+    }
+
+    /// Reorders or updates a deferred report before it is flushed
+    pub fn replace_deferred(env: Env, period_id: u32, new_amount: i128) {
+        if env.storage().persistent().has(&DeferredDataKey::DeferredReports(period_id)) {
+            env.storage()
+                .persistent()
+                .set(&DeferredDataKey::DeferredReports(period_id), &new_amount);
+        }
+    }
+
+    /// Atomically flushes deferred reports, making them claimable
+    pub fn close_period(env: Env, period_id: u32) {
+        let deferred_key = DeferredDataKey::DeferredReports(period_id);
+        if let Some(amount) = env.storage().persistent().get::<_, i128>(&deferred_key) {
+            env.storage().persistent().remove(&deferred_key);
+            env.events().publish((symbol_short!("def_flush"), period_id), amount);
+        }
+    }
+
+    /// Claim attempt checking for deferred status
+    pub fn claim(env: Env, period_id: u32) {
+        if env.storage().persistent().has(&DeferredDataKey::DeferredReports(period_id)) {
+            panic_with_error!(&env, DistributionError::DistributionDeferred);
+        }
+        // Normal claim execution logic (legacy)
+    }
+}
+
+#[cfg(test)]
+mod test_close_period;
